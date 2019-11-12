@@ -1,0 +1,7 @@
+.idea
+__pycache__
+build/
+ROM/
+*.c
+*.so
+*.html
