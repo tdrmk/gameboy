@@ -19,3 +19,6 @@ cdef class Timer:
 
     @cython.locals(divider=uint32_t)
     cdef void tick(self, uint32_t cycles)
+
+    cdef void save(self, object f)
+    cdef void load(self, object f)

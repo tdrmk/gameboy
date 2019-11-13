@@ -1,3 +1,5 @@
+import struct
+
 V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD = range(0, 5)
 
 RIGHT, LEFT, UP, DOWN, A, B, SELECT, START = range(8)
@@ -29,6 +31,14 @@ class Joypad:
 
         # Needs CPU to raise interrupts
         self.cpu = None
+
+    def save(self, f):
+        f.write(struct.pack('<BBBBB BBBBB', self.right, self.left, self.up, self.down, self.A, self.B, self.select,
+                            self.start, self.buttons, self.directions))
+
+    def load(self, f):
+        self.right, self.left, self.up, self.down, self.A, self.B, self.select, \
+            self.start, self.buttons, self.directions = struct.unpack('<BBBBB BBBBB', f.read(10))
 
     def attach_cpu(self, cpu):
         self.cpu = cpu

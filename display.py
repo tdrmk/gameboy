@@ -24,7 +24,8 @@ key_map = {
 
 
 class Display:
-    def __init__(self, _joypad, stretch=True, scale=1):
+    def __init__(self, gameboy, _joypad, stretch=False, scale=1):
+        self.gameboy = gameboy
         self.joypad = _joypad
         self.blank = False
         self.stretch = stretch
@@ -61,12 +62,17 @@ class Display:
 
     def _handle_events(self):
         for event in sdl2.ext.get_events():
-            if event.type == sdl2.SDL_QUIT:
+            if event.type == sdl2.SDL_QUIT or (event.type == sdl2.SDL_KEYDOWN and event.key.keysym.sym == sdl2.SDLK_q):
+                self.gameboy.save()
+                print('Exiting the game!!')
                 exit()
             if event.type == sdl2.SDL_KEYDOWN and event.key.keysym.sym in key_map:
                 self.joypad.handle_key(key_map[event.key.keysym.sym], True)
             elif event.type == sdl2.SDL_KEYUP and event.key.keysym.sym in key_map:
                 self.joypad.handle_key(key_map[event.key.keysym.sym], False)
+            elif event.type == sdl2.SDL_KEYDOWN and event.key.keysym.sym == sdl2.SDLK_s:
+                # Save the game
+                self.gameboy.save()
 
     def render(self, frame):
         self._handle_events()

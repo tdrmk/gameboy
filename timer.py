@@ -1,3 +1,5 @@
+import struct
+
 V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD = range(0, 5)
 
 dividers = [1024, 16, 64, 256]
@@ -16,6 +18,13 @@ class Timer:
 
         # Needs CPU to raise interrupts
         self.cpu = None
+
+    def save(self, f):
+        f.write(struct.pack('<BBBBII',  self.div, self.tima, self.tma, self.tac, self.div_counter, self.tima_counter))
+
+    def load(self, f):
+        self.div, self.tima, self.tma, self.tac,\
+            self.div_counter, self.tima_counter = struct.unpack('<BBBBII', f.read(12))
 
     def attach_cpu(self, cpu):
         self.cpu = cpu

@@ -31,3 +31,6 @@ cdef class CPU:
 
     @cython.locals(opcode=uint16_t)
     cdef uint32_t tick(self)
+
+    cdef void save(self, object f)
+    cdef void load(self, object f)

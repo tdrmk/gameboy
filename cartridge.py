@@ -3,6 +3,7 @@ try:
 except ImportError:
     compiled = False
 
+import struct
 from time import time
 import array
 
@@ -31,29 +32,31 @@ ram_info = {
 def get_cartridge(filename):
     with open(filename, 'rb') as f:
         contents = f.read()
-    title = contents[0x134:0x143].strip(b'\x00')
-    print(f'Game: {title.decode()}')
+    title = contents[0x134:0x143].strip(b'\x00').decode()
+    print(f'Game: {title}')
     cartridge_type = contents[0x147]
     print(f'0x0143:{contents[0x143]:02X} 0x146:{contents[0x0146]:02X}')
     num_rom_banks = rom_info[contents[0x0148]]['banks']
     num_ram_banks = ram_info[contents[0x0149]]['banks']
     if cartridge_type == 0x00:
         print('Cartridge has ROM')
-        return NoController(contents, has_ram=False)
+        cartridge = NoController(contents, has_ram=False)
     elif cartridge_type == 0x08 or cartridge_type == 0x09:
         print('Cartridge has ROM + RAM')
-        return NoController(contents, has_ram=True)
+        cartridge = NoController(contents, has_ram=True)
     elif cartridge_type == 0x01:
         print('Cartridge has ROM + MBC1')
-        return MBC1(contents, num_rom_banks, num_ram_banks)
+        cartridge = MBC1(contents, num_rom_banks, num_ram_banks)
     elif cartridge_type == 0x02 or cartridge_type == 0x03:
         print('Cartridge has ROM + MBC1 + RAM')
-        return MBC1(contents, num_rom_banks, num_ram_banks)
+        cartridge = MBC1(contents, num_rom_banks, num_ram_banks)
     elif cartridge_type == 0x12 or cartridge_type == 0x13:
         print('Cartridge has ROM + MBC3 + RAM')
-        return MBC3(contents, num_rom_banks, num_ram_banks)
+        cartridge = MBC3(contents, num_rom_banks, num_ram_banks)
     else:
         raise NotImplementedError(f'Cartridge type {cartridge_type:02X} not implemented!')
+    cartridge.set_title(title)
+    return cartridge
 
 
 class Controller:
@@ -63,14 +66,39 @@ class Controller:
     def write_byte(self, address, byte):
         pass
 
+    def save(self, f):
+        pass
+
+    def load(self, f):
+        pass
+
+    def set_title(self, title):
+        self.title = title
+
+    def get_title(self):
+        return self.title
+
+
+RAM_BANK = 8192
+
 
 class NoController(Controller):
     def __init__(self, contents, has_ram=False):
         self.contents = contents
         self.has_ram = has_ram
         if self.has_ram:  # 8kB RAM if it has any
-            ram = bytearray(8192)
+            ram = bytearray(RAM_BANK)
             self.ram = ram
+
+    def save(self, f):
+        if self.has_ram:
+            for i in range(RAM_BANK):
+                f.write(self.ram[i].to_bytes(1, 'little'))
+
+    def load(self, f):
+        if self.has_ram:
+            for i in range(RAM_BANK):
+                self.ram[i] = ord(f.read(1))
 
     def read_byte(self, address):
         if 0x0000 <= address <= 0x7FFF:
@@ -91,16 +119,34 @@ class MBC1(Controller):
 
         if compiled:
             self.rom_banks = memoryview(bytearray(contents)).cast('B', shape=(num_rom_banks, 16384))
-            self.ram_banks = [array.array('B', [0] * 8192) for _ in range(4)]
+            self.ram_banks = [array.array('B', [0] * RAM_BANK) for _ in range(4)]
         else:
             self.rom_banks = [contents[16384 * i: 16384 * (i + 1)] for i in range(num_rom_banks)]
-            self.ram_banks = [array.array('B', [0] * 8192) for _ in range(4)]
+            self.ram_banks = [array.array('B', [0] * RAM_BANK) for _ in range(4)]
         self.ram_enable = False  # Flag to indicate if ram is enabled or not
         self.selected_ram_bank = 0
         self.selected_rom_bank = 1
 
         # Controller exists in either one of the modes (RAM or ROM banking modes).
         self.rom_banking_mode = True
+
+    def save(self, f):
+        f.write(self.ram_enable.to_bytes(1, 'little'))
+        f.write(self.selected_ram_bank.to_bytes(1, 'little'))
+        f.write(self.selected_rom_bank.to_bytes(1, 'little'))
+        f.write(self.rom_banking_mode.to_bytes(1, 'little'))
+        for bank in range(self.num_ram_banks):  # save only those being used
+            for offset in range(RAM_BANK):
+                f.write(self.ram_banks[bank][offset].to_bytes(1, 'little'))
+
+    def load(self, f):
+        self.ram_enable = ord(f.read(1))
+        self.selected_ram_bank = ord(f.read(1))
+        self.selected_rom_bank = ord(f.read(1))
+        self.rom_banking_mode = ord(f.read(1))
+        for bank in range(self.num_ram_banks):
+            for offset in range(RAM_BANK):
+                self.ram_banks[bank][offset] = ord(f.read(1))
 
     def read_byte(self, address):
         if 0x0000 <= address <= 0x3FFF:
@@ -168,6 +214,14 @@ class RTC:
         self.halt = 0  # Active by default
         self.day_carry = 0
 
+    def save(self, f):
+        f.write(struct.pack('<fBBBBBBB', self.start_time, self.seconds, self.minutes, self.hours,
+                            self.day_lower, self.day_upper, self.halt, self.day_carry))
+
+    def load(self, f):
+        self.start_time, self.seconds, self.minutes, self.hours, self.day_lower, \
+            self.day_upper, self.halt, self.day_carry = struct.unpack('<fBBBBBBB', f.read(11))
+
     # These reads and writes are different from usual and are not addresses
     # https://gbdev.gg8.se/wiki/articles/Memory_Bank_Controllers
     def read_register(self, address):
@@ -220,14 +274,12 @@ class MBC3(Controller):
     def __init__(self, contents, num_rom_banks, num_ram_banks):
         self.num_rom_banks = num_rom_banks
         self.num_ram_banks = num_ram_banks
-        # self.rom_banks = [contents[16384 * i:16384 * (i + 1)] for i in range(num_rom_banks)]
-        # self.ram_banks = [bytearray(8192) for _ in range(num_ram_banks)]
         if compiled:
             self.rom_banks = memoryview(bytearray(contents)).cast('B', shape=(num_rom_banks, 16384))
-            self.ram_banks = [array.array('B', [0] * 8192) for _ in range(16)]
+            self.ram_banks = [array.array('B', [0] * RAM_BANK) for _ in range(16)]
         else:
             self.rom_banks = [contents[16384 * i: 16384 * (i + 1)] for i in range(num_rom_banks)]
-            self.ram_banks = [array.array('B', [0] * 8192) for _ in range(16)]
+            self.ram_banks = [array.array('B', [0] * RAM_BANK) for _ in range(16)]
 
         self.ram_enable = False  # Flag to indicate if ram/rtc is enabled or not
         self.selected_ram_bank = 0  # Value in range 0x00-0x07 indicate external RAM bank, 0x08-0x0C RTC Register
@@ -238,6 +290,26 @@ class MBC3(Controller):
         self.ram_banking_mode = True
 
         self.rtc = RTC()
+
+    def save(self, f):
+        f.write(self.ram_enable.to_bytes(1, 'little'))
+        f.write(self.selected_ram_bank.to_bytes(1, 'little'))
+        f.write(self.selected_rom_bank.to_bytes(1, 'little'))
+        f.write(self.ram_banking_mode.to_bytes(1, 'little'))
+        self.rtc.save(f)
+        for bank in range(self.num_ram_banks):  # save only those being used
+            for offset in range(RAM_BANK):
+                f.write(self.ram_banks[bank][offset].to_bytes(1, 'little'))
+
+    def load(self, f):
+        self.ram_enable = ord(f.read(1))
+        self.selected_ram_bank = ord(f.read(1))
+        self.selected_rom_bank = ord(f.read(1))
+        self.ram_banking_mode = ord(f.read(1))
+        self.rtc.load(f)
+        for bank in range(self.num_ram_banks):
+            for offset in range(RAM_BANK):
+                self.ram_banks[bank][offset] = ord(f.read(1))
 
     def read_byte(self, address):
         if 0x0000 <= address <= 0x3FFF:

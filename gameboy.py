@@ -2,6 +2,7 @@ try:
     from cython import compiled
 except ImportError:
     compiled = False
+from time import localtime, strftime
 
 from cpu import CPU
 from memory import MMU
@@ -17,14 +18,14 @@ V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD = range(0, 5)
 
 
 class Gameboy:
-    def __init__(self, gb_file, boot_file=None):
+    def __init__(self, gb_file, boot_file=None, save_file=None, stretch=False):
         boot_rom = BootROM(boot_file)
         cartridge = get_cartridge(gb_file)
         timer = Timer()
         joypad = Joypad()
         gpu = GPU()
         memory = MMU(boot_rom, cartridge, gpu, joypad, timer)
-        display = Display(joypad)
+        display = Display(self, joypad, stretch)
         cpu = CPU(memory)
 
         timer.attach_cpu(cpu)
@@ -39,6 +40,32 @@ class Gameboy:
         self.memory = memory
         self.cpu = cpu
         self.display = display
+
+        if save_file is not None:
+            # Load the game from the specified load file !!
+            self.load(save_file)
+
+    def save(self):
+        filename = f"SAVE/{self.cartridge.get_title()}[{strftime('%d %b %Y %H:%M:%S', localtime())}].save"
+        with open(filename, 'wb') as f:
+            self.cpu.save(f)
+            self.cartridge.save(f)
+            self.memory.save(f)
+            self.gpu.save(f)
+            self.joypad.save(f)
+            self.timer.save(f)
+
+    def load(self, filename):
+        try:
+            with open(filename, 'rb') as f:
+                self.cpu.load(f)
+                self.cartridge.load(f)
+                self.memory.load(f)
+                self.gpu.load(f)
+                self.joypad.load(f)
+                self.timer.load(f)
+        except FileNotFoundError:
+            print(f'Specified save file {filename} does not exist!')
 
     def tick_frame(self):
         if self.gpu.display_enable:
@@ -97,4 +124,3 @@ class Gameboy:
     def mainloop(self):
         while True:
             self.tick_frame()
-

@@ -1,6 +1,7 @@
 from libc.stdint cimport uint8_t, uint16_t
 cimport sdl2
 import sdl2
+from gameboy cimport Gameboy
 cimport joypad
 from joypad cimport Joypad
 from cpython.array cimport array
@@ -11,7 +12,8 @@ RIGHT, LEFT, UP, DOWN, A, B, SELECT, START = range(8)
 
 
 cdef class Display:
-    def __init__(self, Joypad _joypad, bint stretch=True, int scale=1):
+    def __init__(self, Gameboy gameboy, Joypad _joypad, bint stretch=True, int scale=1):
+        self.gameboy = gameboy
         self.joypad = _joypad
         self.blank = False
         self.stretch = stretch
@@ -32,9 +34,9 @@ cdef class Display:
         cdef sdl2.SDL_Event event
         cdef uint8_t pressed
         while sdl2.SDL_PollEvent(&event) != 0:
-            if event.type == sdl2.SDL_QUIT:
-                running = False
-                break
+            if event.type == sdl2.SDL_QUIT or (event.type == sdl2.SDL_KEYDOWN and event.key.keysym.sym == sdl2.SDLK_q):
+                self.gameboy.save()
+                exit()
             elif event.type == sdl2.SDL_KEYDOWN or event.type == sdl2.SDL_KEYUP:
                 pressed = 0 if event.type == sdl2.SDL_KEYUP else 1
                 if event.key.keysym.sym == sdl2.SDLK_RIGHT:
@@ -53,6 +55,8 @@ cdef class Display:
                     self.joypad.handle_key(SELECT, pressed)
                 elif event.key.keysym.sym == sdl2.SDLK_RETURN:
                     self.joypad.handle_key(START, pressed)
+                elif event.key.keysym.sym == sdl2.SDLK_s and event.type == sdl2.SDL_KEYDOWN:
+                    self.gameboy.save()
 
     cdef void _render(self, const void * frame):
         cdef int w, h

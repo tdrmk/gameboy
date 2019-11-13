@@ -27,3 +27,6 @@ cdef class Joypad:
     cdef void handle_key(self, uint8_t key, uint8_t pressed)
     cdef void write_byte(self, uint8_t byte)
     cdef uint8_t read_byte(self)
+
+    cdef void save(self, object f)
+    cdef void load(self, object f)

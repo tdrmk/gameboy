@@ -71,3 +71,5 @@ cdef class GPU:
         )
     cdef array render(self)
 
+    cdef void save(self, object f)
+    cdef void load(self, object f)

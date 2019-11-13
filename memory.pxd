@@ -27,3 +27,6 @@ cdef class MMU:
     cdef uint8_t read_byte(self, uint16_t address)
     @cython.locals(src=uint16_t, dst=uint16_t, i=uint16_t)
     cdef void write_byte(self, uint16_t address, uint8_t byte)
+
+    cdef void save(self, object f)
+    cdef void load(self, object f)

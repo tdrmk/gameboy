@@ -1,5 +1,7 @@
 # from instructions import fetch_opcode, execute_opcode
 import instructions
+import struct
+
 IE_ADDRESS = 0xFFFF  # Interrupt Enable (enabled)
 IF_ADDRESS = 0xFF0F  # Interrupt Flag (requests)
 
@@ -24,6 +26,15 @@ class CPU:
 
         self.ime = True  # Interrupt Master Enable Flag
         self.memory = memory
+
+    def save(self, f):
+        f.write(struct.pack('<HHBBBBBBHBBBB',
+                            self.PC, self.SP, self.A, self.B, self.C, self.D, self.E, self.ime,
+                            self.HL, self.FLAG_Z, self.FLAG_N, self.FLAG_H, self.FLAG_C))
+
+    def load(self, f):
+        self.PC, self.SP, self.A, self.B, self.C, self.D, self.E, self.ime, \
+            self.HL, self.FLAG_Z, self.FLAG_N, self.FLAG_H, self.FLAG_C = struct.unpack('<HHBBBBBBHBBBB', f.read(16))
 
     def request_interrupt(self, interrupt):
         self.memory.write_byte(IF_ADDRESS, self.memory.read_byte(IF_ADDRESS) | (1 << interrupt))

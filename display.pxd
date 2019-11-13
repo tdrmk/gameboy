@@ -1,11 +1,12 @@
 from libc.stdint cimport uint8_t, uint16_t
 from cpython.array cimport array
 
-
+from gameboy cimport Gameboy
 cimport sdl2
 cimport joypad
 
 cdef class Display:
+    cdef Gameboy gameboy
     cdef joypad.Joypad joypad
     cdef bint blank
     cdef bint stretch

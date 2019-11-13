@@ -1,10 +1,18 @@
+import struct
+
+# SIZES
+WORK_RAM = 8192
+HIGH_RAM = 127
+UNUSABLE_IO_PORTS = 96
+IO_PORTS = 128
+
 class MMU:
     # Memory management Unit
     def __init__(self, boot_rom, cartridge, gpu, joypad, timer):
-        work_ram = bytearray(8192)
-        high_ram = bytearray(127)
-        unusable_io_ports = bytearray(96)
-        io_ports = bytearray(128)
+        work_ram = bytearray(WORK_RAM)
+        high_ram = bytearray(HIGH_RAM)
+        unusable_io_ports = bytearray(UNUSABLE_IO_PORTS)
+        io_ports = bytearray(IO_PORTS)
         self.work_ram = work_ram
         self.high_ram = high_ram
         self.unusable_io_ports = unusable_io_ports
@@ -21,6 +29,29 @@ class MMU:
         self.dma = 0
         self.interrupt_request = 0
         self.interrupt_enable = 0
+
+    def save(self, f):
+        f.write(struct.pack('<BBBB', self.boot_rom_enabled, self.dma, self.interrupt_request, self.interrupt_enable))
+        for i in range(WORK_RAM):
+            f.write(self.work_ram[i].to_bytes(1, 'little'))
+        for i in range(HIGH_RAM):
+            f.write(self.high_ram[i].to_bytes(1, 'little'))
+        for i in range(UNUSABLE_IO_PORTS):
+            f.write(self.unusable_io_ports[i].to_bytes(1, 'little'))
+        for i in range(IO_PORTS):
+            f.write(self.io_ports[i].to_bytes(1, 'little'))
+
+    def load(self, f):
+        self.boot_rom_enabled, self.dma, self.interrupt_request,\
+            self.interrupt_enable = struct.unpack('<BBBB', f.read(4))
+        for i in range(WORK_RAM):
+            self.work_ram[i] = ord(f.read(1))
+        for i in range(HIGH_RAM):
+            self.high_ram[i] = ord(f.read(1))
+        for i in range(UNUSABLE_IO_PORTS):
+            self.unusable_io_ports[i] = ord(f.read(1))
+        for i in range(IO_PORTS):
+            self.io_ports[i] = ord(f.read(1))
 
     def read_byte(self, address):
         if 0 <= address <= 0x7FFF:

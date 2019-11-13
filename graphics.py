@@ -3,19 +3,25 @@ try:
 except ImportError:
     compiled = False
 
+import struct
 from array import array
 
 V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD = range(0, 5)
 color_palette = (0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000)
 
+PALETTE = 4
+VIDEO_RAM = 8192
+SPRITE_ATTRIB = 160
+TILES_UNPACKED = 384 * 8 * 8
+
 
 class GPU:
     def __init__(self):
-        self.video_ram = bytearray(8192)
-        self.sprite_attrib = bytearray(160)
+        self.video_ram = bytearray(VIDEO_RAM)
+        self.sprite_attrib = bytearray(SPRITE_ATTRIB)
 
         # 8000-97FF, each tile is 16B unpacked to 64B
-        self.tiles_unpacked = bytearray(384 * 8 * 8)
+        self.tiles_unpacked = bytearray(TILES_UNPACKED)
 
         # while line is getting scanned, store values for scy, scx, wy and wx
         self.line_params = bytearray(144 * 4)
@@ -28,13 +34,12 @@ class GPU:
         self.lyc = 0
         self.bgp = 0
         self.obp0 = 0
-        self.bgp_palette = bytearray(4)
-        self.obp0_palette = bytearray(4)
         self.obp1 = 0
-        self.obp1_palette = bytearray(4)
-
         self.wy = 0
         self.wx = 0
+        self.bgp_palette = bytearray(4)
+        self.obp0_palette = bytearray(4)
+        self.obp1_palette = bytearray(4)
 
         # Flags
         self.display_enable = False
@@ -59,13 +64,50 @@ class GPU:
             v = memoryview(self.frame_bytes).cast('I')
             self.frame_buffer = [v[i:i + 160] for i in range(0, 160 * 144, 160)]
 
+    def save(self, f):
+        f.write(struct.pack('<BBBBB BBBBB B', self.lcdc, self.stat, self.scy, self.scx, self.ly, self.lyc, self.bgp,
+                            self.obp0, self.obp1, self.wy, self.wx))
+        f.write(struct.pack('<BBBBB HHHB', self.display_enable, self.display_window, self.display_background,
+                            self.display_sprite, self.large_tiles, self.window_tile_map, self.bkgrnd_tile_map,
+                            self.tile_data_addr, self.signed_addr))
+        for i in range(PALETTE):
+            f.write(self.bgp_palette[i].to_bytes(1, 'little'))
+        for i in range(PALETTE):
+            f.write(self.obp0_palette[i].to_bytes(1, 'little'))
+        for i in range(PALETTE):
+            f.write(self.obp1_palette[i].to_bytes(1, 'little'))
+        for i in range(VIDEO_RAM):
+            f.write(self.video_ram[i].to_bytes(1, 'little'))
+        for i in range(SPRITE_ATTRIB):
+            f.write(self.sprite_attrib[i].to_bytes(1, 'little'))
+        for i in range(TILES_UNPACKED):
+            f.write(self.tiles_unpacked[i].to_bytes(1, 'little'))
+
+    def load(self, f):
+        self.lcdc, self.stat, self.scy, self.scx, self.ly, self.lyc, self.bgp, \
+            self.obp0, self.obp1, self.wy, self.wx = struct.unpack('<BBBBB BBBBB B', f.read(11))
+        self.display_enable, self.display_window, self.display_background, \
+            self.display_sprite, self.large_tiles, self.window_tile_map, self.bkgrnd_tile_map, \
+            self.tile_data_addr, self.signed_addr = struct.unpack('<BBBBB HHHB', f.read(12))
+        for i in range(PALETTE):
+            self.bgp_palette[i] = ord(f.read(1))
+        for i in range(PALETTE):
+            self.obp0_palette[i] = ord(f.read(1))
+        for i in range(PALETTE):
+            self.obp1_palette[i] = ord(f.read(1))
+        for i in range(VIDEO_RAM):
+            self.video_ram[i] = ord(f.read(1))
+        for i in range(SPRITE_ATTRIB):
+            self.sprite_attrib[i] = ord(f.read(1))
+        for i in range(TILES_UNPACKED):
+            self.tiles_unpacked[i] = ord(f.read(1))
+
     def attach_cpu(self, cpu):
         self.cpu = cpu
 
     def set_vram(self, address, byte):
         self.video_ram[address] = byte
         if 0 <= address <= 0x17FF:
-
             # write to tile area is un-pack from tile 16B --> 64B, ie, 2B row -> 8B row
             tr = address & ~(1 << 0)  # row address
             high_byte = self.video_ram[tr + 1]

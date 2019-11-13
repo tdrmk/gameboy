@@ -29,3 +29,6 @@ cdef class Gameboy:
     cdef void handle_cycles(self, uint32_t num_cycles)
 
     cpdef void mainloop(self)
+
+    cdef void save(self)
+    cpdef void load(self, str filename)
