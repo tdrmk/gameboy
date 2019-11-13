@@ -3,6 +3,7 @@ try:
 except ImportError:
     compiled = False
 
+from time import time
 import array
 
 rom_info = {
@@ -154,8 +155,65 @@ class MBC1(Controller):
                 self.selected_ram_bank = 0  # Only first bank is accessible
 
 
-# class RTC:
-#     pass
+class RTC:
+    # A Crude implementation of RTC
+    def __init__(self):
+        self.start_time = time()
+        # Latched values
+        self.seconds = 0
+        self.minutes = 0
+        self.hours = 0
+        self.day_lower = 0
+        self.day_upper = 0
+        self.halt = 0  # Active by default
+        self.day_carry = 0
+
+    # These reads and writes are different from usual and are not addresses
+    # https://gbdev.gg8.se/wiki/articles/Memory_Bank_Controllers
+    def read_register(self, address):
+        if address == 0x08:  # RTC Seconds
+            return self.seconds
+        elif address == 0x09:  # RTC Minutes
+            return self.minutes
+        elif address == 0x0A:
+            return self.hours
+        elif address == 0x0B:
+            return self.day_lower
+        elif address == 0x0C:
+            return self.day_upper + (self.halt << 6) + (self.day_carry << 7)
+        return 0x00
+
+    def write_register(self, address, byte):
+        if address == 0x08:
+            self.seconds = byte
+        elif address == 0x09:
+            self.minutes = byte
+        elif address == 0x0A:
+            self.hours = byte
+        elif address == 0x0B:
+            self.day_lower = byte
+        elif address == 0x0C:
+            self.day_upper = byte & 0b1
+            self.halt = (byte >> 6) & 0b1
+            # TODO: HALT and DAY CARRY
+            self.day_carry = (byte >> 7) & 0b1
+
+    def write_byte(self, address, byte):
+        # Writes for enabling latch clock data 0x6000-0x7FFF
+        if byte == 0x01:
+            latch_time = time()
+            self.seconds = int(latch_time - self.start_time) % 60
+            self.minutes = int((latch_time - self.start_time) / 60) % 60
+            self.hours = int((latch_time - self.start_time) / 3600) % 24
+            day_counter = int((latch_time - self.start_time) / 86400)
+            self.day_lower = day_counter % 256
+            self.day_upper = (day_counter >> 8) & 0b1
+            if day_counter > 512:
+                # It is reset only on write
+                self.day_carry = 1
+            if day_counter > 512:
+                # Update the start time by
+                self.start_time += ((day_counter >> 9) << 9) * 86400
 
 
 class MBC3(Controller):
@@ -179,6 +237,8 @@ class MBC3(Controller):
         # Controller exists in either one of the modes (RAM banking modes or RTC Register Select).
         self.ram_banking_mode = True
 
+        self.rtc = RTC()
+
     def read_byte(self, address):
         if 0x0000 <= address <= 0x3FFF:
             # ROM Bank 0
@@ -189,8 +249,8 @@ class MBC3(Controller):
         elif self.ram_enable and 0xA000 <= address <= 0xBFFF:
             if 0x08 <= self.selected_ram_bank <= 0x0C:
                 # TODO: Use RTC Register
-                print('Reading from RTC Register ??')
-                return 0x00
+                # print('Reading from RTC Register ??')
+                return self.rtc.read_register(self.selected_ram_bank)
                 pass
             # From selected RAM Bank
             return self.ram_banks[self.selected_ram_bank][address & 0x1FFF]
@@ -200,8 +260,8 @@ class MBC3(Controller):
         if self.ram_enable and 0xA000 <= address <= 0xBFFF:
             if 0x08 <= self.selected_ram_bank <= 0x0C:
                 # TODO: Use RTC Register
-                print('Writing to RTC Register ??')
-                pass
+                # print('Writing to RTC Register ??')
+                self.rtc.write_register(self.selected_ram_bank, byte)
             else:
                 # Write to corresponding RAM bank
                 self.ram_banks[self.selected_ram_bank][address & 0x1FFF] = byte
@@ -226,5 +286,5 @@ class MBC3(Controller):
 
         elif 0x6000 <= address <= 0x7FFF:
             # TODO: Use RTC Register
-            print('Latching RTC Register ??')
-            pass
+            # print('Latching RTC Register ??')
+            self.rtc.write_byte(address, byte)
