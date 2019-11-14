@@ -63,7 +63,7 @@ class Display:
     def _handle_events(self):
         for event in sdl2.ext.get_events():
             if event.type == sdl2.SDL_QUIT or (event.type == sdl2.SDL_KEYDOWN and event.key.keysym.sym == sdl2.SDLK_q):
-                self.gameboy.save()
+                # self.gameboy.save()
                 print('Exiting the game!!')
                 exit()
             if event.type == sdl2.SDL_KEYDOWN and event.key.keysym.sym in key_map:

@@ -24,7 +24,7 @@ class GPU:
         self.tiles_unpacked = bytearray(TILES_UNPACKED)
 
         # while line is getting scanned, store values for scy, scx, wy and wx
-        self.line_params = bytearray(144 * 4)
+        self.line_params = bytearray(144 * 7)
         # Registers
         self.lcdc = 0
         self.stat = 0
@@ -156,17 +156,18 @@ class GPU:
 
     def scan_line(self, y):
         # Store the line parameters when line was scanned.
-        self.line_params[y * 4 + 0] = self.scy
-        self.line_params[y * 4 + 1] = self.scx
-        self.line_params[y * 4 + 2] = self.wy
-        self.line_params[y * 4 + 3] = self.wx
+        self.line_params[y * 7 + 0] = self.scy
+        self.line_params[y * 7 + 1] = self.scx
+        self.line_params[y * 7 + 2] = self.wy
+        self.line_params[y * 7 + 3] = self.wx
+        self.line_params[y * 7 + 4] = self.display_sprite
 
     def render(self):
         for y in range(144):
             # Use those parameters when the line was scanned.
-            scy, scx = self.line_params[y * 4 + 0], self.line_params[y * 4 + 1]
-            wy = self.line_params[y * 4 + 2]
-            wx = self.line_params[y * 4 + 3] - 7
+            scy, scx = self.line_params[y * 7 + 0], self.line_params[y * 7 + 1]
+            wy = self.line_params[y * 7 + 2]
+            wx = self.line_params[y * 7 + 3] - 7
             for x in range(160):
                 if self.display_window and y >= wy and x >= wx:
                     wt = self.video_ram[self.window_tile_map + (((y - wy) // 8) % 32) * 32 + (((x - wx) // 8) % 32)]
@@ -204,7 +205,8 @@ class GPU:
 
                     for dy in range(sprite_height):
                         y = oy + dy if not yf else oy + (sprite_height - dy - 1)  # y position on the frame
-                        if y < 0 or y >= 144: continue
+
+                        if y < 0 or y >= 144 or not self.line_params[y * 7 + 4]: continue
                         for dx in range(8):
                             x = ox + dx if not xf else ox + (7 - dx)  # x position on the frame
                             if x < 0 or x >= 160: continue

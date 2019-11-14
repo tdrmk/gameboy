@@ -35,7 +35,7 @@ cdef class Display:
         cdef uint8_t pressed
         while sdl2.SDL_PollEvent(&event) != 0:
             if event.type == sdl2.SDL_QUIT or (event.type == sdl2.SDL_KEYDOWN and event.key.keysym.sym == sdl2.SDLK_q):
-                self.gameboy.save()
+                # self.gameboy.save()
                 exit()
             elif event.type == sdl2.SDL_KEYDOWN or event.type == sdl2.SDL_KEYUP:
                 pressed = 0 if event.type == sdl2.SDL_KEYUP else 1

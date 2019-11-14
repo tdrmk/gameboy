@@ -13,7 +13,7 @@ cdef class GPU:
     cdef uint8_t[8192] video_ram
     cdef uint8_t[160] sprite_attrib
     cdef uint8_t[384 * 8 * 8] tiles_unpacked
-    cdef uint8_t[144 * 4] line_params
+    cdef uint8_t[144 * 7] line_params
 
     cdef uint8_t lcdc
     cdef uint8_t stat
