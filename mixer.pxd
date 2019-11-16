@@ -137,7 +137,7 @@ cdef class Mixer:
     cdef Sound3 sound3
     cdef Sound4 sound4
     cdef uint8_t NR50, NR51, NR52
-    cdef bint enabled
+    cdef bint enabled, _play_sound
 
     @cython.locals(offset=uint8_t)
     cdef uint8_t read_byte(self, uint16_t address)

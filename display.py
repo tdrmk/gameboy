@@ -48,6 +48,8 @@ class Display:
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
                 # Saving the game to a file.
                 self.gameboy.save()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_m:
+                self.gameboy.mixer.toggle_mute()
 
     def render(self, frame_buffer):
         self._handle_events()

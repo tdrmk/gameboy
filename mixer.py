@@ -553,6 +553,21 @@ class Mixer:
         self.NR51 = 0
         self.NR52 = 0
         self.enabled = False
+        self._play_sound = True
+
+    def toggle_mute(self):
+        if self._play_sound:
+            self.channel1.set_enable(False)
+            self.channel2.set_enable(False)
+            self.channel3.set_enable(False)
+            self.channel4.set_enable(False)
+            self._play_sound = False
+        else:
+            self.channel1.set_enable(True)
+            self.channel2.set_enable(True)
+            self.channel3.set_enable(True)
+            self.channel4.set_enable(True)
+            self._play_sound = True
 
     def save(self, f):
         f.write(struct.pack('<BBBB', self.NR50, self.NR51, self.NR52, self.enabled))
