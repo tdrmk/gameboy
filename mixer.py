@@ -1,4 +1,6 @@
 import channel
+import struct
+
 
 # WAVEFORMS = {
 #     # duty , pattern
@@ -63,6 +65,28 @@ class Sound1:
         # Length
         self.length_enabled = False
         self.length = 64
+
+    def save(self, f):
+        f.write(struct.pack('<BBBBB', self.NR10, self.NR11, self.NR12, self.NR13, self.NR14))
+        f.write(struct.pack('<BII', self.enabled, self.counter, self.steps))
+        f.write(struct.pack('<BBIIIIf', self.sweep_dec, self.sweep_enabled, self.sweep_period, self.sweep_shift,
+                            self.sweep_counter, self.freq_x, self.frequency))
+        f.write(struct.pack('<BBIIII', self.volume_amplify, self.volume_enabled,
+                            self.volume_initial, self.volume_period, self.volume_counter, self.volume))
+        f.write(struct.pack('<BI', self.length_enabled, self.length))
+        for i in range(len(self.wave)):
+            f.write(self.wave[i].to_bytes(1, 'little'))
+
+    def load(self, f):
+        self.NR10, self.NR11, self.NR12, self.NR13, self.NR14 = struct.unpack('<BBBBB', f.read(5))
+        self.enabled, self.counter, self.steps = struct.unpack('<BII', f.read(9))
+        self.sweep_dec, self.sweep_enabled, self.sweep_period, self.sweep_shift,\
+            self.sweep_counter, self.freq_x, self.frequency = struct.unpack('<BBIIIIf', f.read(22))
+        self.volume_amplify, self.volume_enabled, self.volume_initial, self.volume_period,\
+            self.volume_counter, self.volume = struct.unpack('<BBIIII', f.read(18))
+        self.length_enabled, self.length = struct.unpack('<BI', f.read(5))
+        for i in range(len(self.wave)):
+            self.wave[i] = ord(f.read(1))
 
     def _stop(self):
         self.channel.stop()
@@ -239,6 +263,22 @@ class Sound3:
 
         self.wave = [0] * 32
 
+    def save(self, f):
+        f.write(struct.pack('<BBBBB', self.NR30, self.NR31, self.NR32, self.NR33, self.NR34))
+        f.write(struct.pack('<BII', self.enabled, self.counter, self.steps))
+        f.write(struct.pack('<BI', self.length_enabled, self.length))
+        f.write(struct.pack('<ff', self.frequency, self.volume))
+        for i in range(len(self.wave)):
+            f.write(self.wave[i].to_bytes(1, 'little'))
+
+    def load(self, f):
+        self.NR30, self.NR31, self.NR32, self.NR33, self.NR34 = struct.unpack('<BBBBB', f.read(5))
+        self.enabled, self.counter, self.steps = struct.unpack('<BII', f.read(9))
+        self.length_enabled, self.length = struct.unpack('<BI', f.read(5))
+        self.frequency, self.volume = struct.unpack('<ff', f.read(8))
+        for i in range(len(self.wave)):
+            self.wave[i] = ord(f.read(1))
+
     def _stop(self):
         self.channel.stop()
 
@@ -358,7 +398,7 @@ class Sound4:
         # Frequency
         # Extracted (Polynomial Counter Register)
         self.clock_shift = 0
-        self.lfsr_mode = 0
+        self.lfsr_mode = False
         self.divisor_code = 0.5
         # both using same to lower the size impact on audio speed
         self.wave_bit15 = lfsr(7)  # Wave to use when lfsr mode = 0
@@ -370,6 +410,24 @@ class Sound4:
         # Length
         self.length_enabled = False
         self.length = 64
+
+    def save(self, f):
+        f.write(struct.pack('<BBBB', self.NR41, self.NR42, self.NR43, self.NR44))
+        f.write(struct.pack('<BII', self.enabled, self.counter, self.steps))
+        f.write(struct.pack('<BIff', self.lfsr_mode, self.clock_shift, self.divisor_code, self.frequency))
+        f.write(struct.pack('<BBIIII', self.volume_amplify, self.volume_enabled,
+                            self.volume_initial, self.volume_period, self.volume_counter, self.volume))
+        f.write(struct.pack('<BI', self.length_enabled, self.length))
+
+    def load(self, f):
+        self.NR41, self.NR42, self.NR43, self.NR44 = struct.unpack('<BBBB', f.read(4))
+        self.enabled, self.counter, self.steps = struct.unpack('<BII', f.read(9))
+        self.lfsr_mode, self.clock_shift, self.divisor_code, self.frequency = struct.unpack('<BIff', f.read(13))
+        self.volume_amplify, self.volume_enabled, self.volume_initial, self.volume_period,\
+            self.volume_counter, self.volume = struct.unpack('<BBIIII', f.read(18))
+        self.length_enabled, self.length = struct.unpack('<BI', f.read(5))
+        # Set the value based on the flag!
+        self.wave = self.wave_bit7 if self.lfsr_mode else self.wave_bit15
 
     def _stop(self):
         self.channel.stop()
@@ -496,6 +554,20 @@ class Mixer:
         self.NR52 = 0
         self.enabled = False
 
+    def save(self, f):
+        f.write(struct.pack('<BBBB', self.NR50, self.NR51, self.NR52, self.enabled))
+        self.sound1.save(f)
+        self.sound2.save(f)
+        self.sound3.save(f)
+        self.sound4.save(f)
+
+    def load(self, f):
+        self.NR50, self.NR51, self.NR52, self.enabled = struct.unpack('<BBBB', f.read(4))
+        self.sound1.load(f)
+        self.sound2.load(f)
+        self.sound3.load(f)
+        self.sound4.load(f)
+
     def read_byte(self, address):
         if address == 0xFF24:
             return self.NR50
@@ -503,7 +575,7 @@ class Mixer:
             return self.NR51
         elif address == 0xFF26:
             # TODO: Read enabled from sounds
-            return (self.NR52 & 0xF0) + (self.sound1.enabled << 0) + (self.sound2.enabled << 1) +\
+            return (self.NR52 & 0xF0) + (self.sound1.enabled << 0) + (self.sound2.enabled << 1) + \
                    (self.sound3.enabled << 2) + (self.sound4.enabled << 3)
 
         if self.enabled:
@@ -641,7 +713,8 @@ class Mixer:
                 self.sound3.wave_pattern_ram(address & 0xF, byte)
 
     def tick(self, ticks):
-        self.sound1.tick(ticks)
-        self.sound2.tick(ticks)
-        self.sound3.tick(ticks)
-        self.sound4.tick(ticks)
+        if self.enabled:
+            self.sound1.tick(ticks)
+            self.sound2.tick(ticks)
+            self.sound3.tick(ticks)
+            self.sound4.tick(ticks)

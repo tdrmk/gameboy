@@ -14,12 +14,12 @@ cdef class Sound1:
     cdef int sweep_period, sweep_shift, sweep_counter, freq_x
     cdef float frequency
 
-    cdef int volume_initial, volume_period, volume_counter, volume
     cdef bint volume_amplify, volume_enabled
+    cdef int volume_initial, volume_period, volume_counter, volume
 
     cdef list wave
-    cdef int length
     cdef bint length_enabled
+    cdef int length
 
     cdef void _stop(self)
 
@@ -44,7 +44,8 @@ cdef class Sound1:
     cdef void handle_freq_sweep(self)
     cdef void handle_length_ctr(self)
     cdef void handle_vol_env(self)
-
+    cdef void save(self, object f)
+    cdef void load(self, object f)
     cdef void tick(self, uint32_t ticks)
 
 cdef class Sound3:
@@ -57,7 +58,7 @@ cdef class Sound3:
     cdef bint length_enabled
 
     cdef list wave
-    cdef int frequency
+    cdef float frequency
     cdef float volume
 
     cdef void _stop(self)
@@ -79,7 +80,8 @@ cdef class Sound3:
     cdef void update_length(self)
     cdef void handle_length_ctr(self)
     cdef void tick(self, uint32_t ticks)
-
+    cdef void save(self, object f)
+    cdef void load(self, object f)
 
 cdef list lfsr(int bits)
 
@@ -90,14 +92,15 @@ cdef class Sound4:
     cdef bint enabled
     cdef int counter, steps
 
-    cdef int clock_shift, lfsr_mode
+    cdef bint lfsr_mode
+    cdef int clock_shift
     cdef float divisor_code
+    cdef float frequency
 
     cdef int volume_initial, volume_period, volume_counter, volume
     cdef bint volume_amplify, volume_enabled
 
     cdef list wave_bit15, wave_bit7, wave
-    cdef float frequency
     cdef int length
     cdef bint length_enabled
 
@@ -123,7 +126,8 @@ cdef class Sound4:
 
     cdef void handle_length_ctr(self)
     cdef void handle_vol_env(self)
-
+    cdef void save(self, object f)
+    cdef void load(self, object f)
     cdef void tick(self, uint32_t ticks)
 
 cdef class Mixer:
@@ -143,4 +147,6 @@ cdef class Mixer:
     cdef void nr52(self, uint8_t byte)
     cdef void write_byte(self, uint16_t address, uint8_t byte)
     cdef void tick(self, uint32_t ticks)
+    cdef void save(self, object f)
+    cdef void load(self, object f)
 

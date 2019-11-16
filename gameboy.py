@@ -57,6 +57,7 @@ class Gameboy:
             self.gpu.save(f)
             self.joypad.save(f)
             self.timer.save(f)
+            self.mixer.save(f)
 
     def load(self, filename):
         try:
@@ -67,6 +68,7 @@ class Gameboy:
                 self.gpu.load(f)
                 self.joypad.load(f)
                 self.timer.load(f)
+                self.mixer.load(f)
         except FileNotFoundError:
             print(f'Specified save file {filename} does not exist!')
 
