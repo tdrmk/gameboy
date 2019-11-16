@@ -7,7 +7,8 @@ cimport joypad
 cimport timer
 cimport memory
 cimport display
-from cpython.array cimport array
+cimport numpy as np
+ctypedef np.uint32_t DTYPE_t
 import cython
 
 cdef uint8_t V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD
@@ -21,8 +22,9 @@ cdef class Gameboy:
     cdef memory.MMU memory
     cdef cpu.CPU cpu
     cdef display.Display display
+    cdef object mixer
 
-    @cython.locals(ly=uint8_t, frame=array)
+    @cython.locals(ly=uint8_t, frame=np.ndarray)
     cdef void tick_frame(self)
 
     @cython.locals(cycles=uint32_t, ticks=uint32_t)

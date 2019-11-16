@@ -13,6 +13,7 @@ from joypad import Joypad
 from timer import Timer
 from display import Display
 import time
+from mixer import Mixer
 
 V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD = range(0, 5)
 
@@ -24,7 +25,8 @@ class Gameboy:
         timer = Timer()
         joypad = Joypad()
         gpu = GPU()
-        memory = MMU(boot_rom, cartridge, gpu, joypad, timer)
+        mixer = Mixer()
+        memory = MMU(boot_rom, cartridge, gpu, joypad, timer, mixer)
         display = Display(self, joypad, stretch)
         cpu = CPU(memory)
 
@@ -40,6 +42,7 @@ class Gameboy:
         self.memory = memory
         self.cpu = cpu
         self.display = display
+        self.mixer = mixer
 
         if save_file is not None:
             # Load the game from the specified load file !!
@@ -87,6 +90,7 @@ class Gameboy:
                 # Mode 0
                 self.gpu.set_stat_mode(0)
                 self.handle_cycles(206)
+                self.mixer.tick(456)
 
             self.cpu.request_interrupt(V_BLANK)
             frame = self.gpu.render()
@@ -100,6 +104,7 @@ class Gameboy:
                 # Mode 1
                 self.gpu.set_stat_mode(1)
                 self.handle_cycles(456)
+                self.mixer.tick(456)
 
             end_time = time.time()
             # Time so as to adjust the frame rate!!
@@ -113,6 +118,7 @@ class Gameboy:
             self.gpu.check_coincidence()
             for y in range(154):
                 self.handle_cycles(456)
+                self.mixer.tick(456)
 
     def handle_cycles(self, num_cycles):
         cycles = 0

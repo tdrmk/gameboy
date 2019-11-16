@@ -4,7 +4,7 @@ except ImportError:
     compiled = False
 
 import struct
-from array import array
+import numpy as np
 
 V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD = range(0, 5)
 color_palette = (0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000)
@@ -57,12 +57,7 @@ class GPU:
         self.cpu = None
 
         # Frame used for rendering allocate once
-        self.frame_bytes = array('B', [0] * (160 * 144 * 4))
-        if compiled:
-            self.frame_buffer = memoryview(self.frame_bytes).cast('I', shape=(144, 160))
-        else:
-            v = memoryview(self.frame_bytes).cast('I')
-            self.frame_buffer = [v[i:i + 160] for i in range(0, 160 * 144, 160)]
+        self.frame_buffer = np.full((160, 144), color_palette[0], dtype=np.uint32)
 
     def save(self, f):
         f.write(struct.pack('<BBBBB BBBBB B', self.lcdc, self.stat, self.scy, self.scx, self.ly, self.lyc, self.bgp,
@@ -173,16 +168,16 @@ class GPU:
                     wt = self.video_ram[self.window_tile_map + (((y - wy) // 8) % 32) * 32 + (((x - wx) // 8) % 32)]
                     if self.signed_addr:
                         wt = (wt ^ 0x80) + 128
-                    self.frame_buffer[y][x] = color_palette[self.bgp_palette[
+                    self.frame_buffer[x][y] = color_palette[self.bgp_palette[
                         self.tiles_unpacked[wt * 64 + ((y - wy) % 8) * 8 + ((x - wx) % 8)]]]
                 elif self.display_background:
                     bt = self.video_ram[self.bkgrnd_tile_map + (((y + scy) // 8) % 32) * 32 + (((x + scx) // 8) % 32)]
                     if self.signed_addr:
                         bt = (bt ^ 0x80) + 128
-                    self.frame_buffer[y][x] = color_palette[self.bgp_palette[
+                    self.frame_buffer[x][y] = color_palette[self.bgp_palette[
                         self.tiles_unpacked[bt * 64 + ((y + scy) % 8) * 8 + ((x + scx) % 8)]]]
                 else:
-                    self.frame_buffer[y][x] = color_palette[0]
+                    self.frame_buffer[x][y] = color_palette[0]
                 # Else stays at the default value of 0!
 
         # TODO: Handle display sprites properly
@@ -214,10 +209,10 @@ class GPU:
                                 color = self.obp1_palette[self.tiles_unpacked[st * 64 + dy * 8 + dx]]
                             else:
                                 color = self.obp0_palette[self.tiles_unpacked[st * 64 + dy * 8 + dx]]
-                            if (pr == 0 or self.frame_buffer[y][x] == color_palette[0]) and color != 0:
-                                self.frame_buffer[y][x] = color_palette[color]
+                            if (pr == 0 or self.frame_buffer[x][y] == color_palette[0]) and color != 0:
+                                self.frame_buffer[x][y] = color_palette[color]
 
-        return self.frame_bytes
+        return self.frame_buffer
 
     def set_stat_mode(self, mode):
         self.stat = (self.stat & 0xFC) | (mode & 0x03)

@@ -1,6 +1,6 @@
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 from cpu cimport CPU
-from cpython.array cimport array
+cimport numpy as np
 
 import cython
 
@@ -8,6 +8,7 @@ import cython
 
 cdef uint32_t[4] color_palette
 cdef uint8_t V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD
+ctypedef np.uint32_t DTYPE_t
 
 cdef class GPU:
     cdef uint8_t[8192] video_ram
@@ -45,8 +46,7 @@ cdef class GPU:
 
     # Need cpu to raise interrupt
     cdef CPU cpu
-    cdef array frame_bytes
-    cdef uint32_t[:,:] frame_buffer
+    cdef np.ndarray frame_buffer
 
     cpdef void attach_cpu(self, CPU cpu)
     @cython.locals(high_byte=uint8_t, low_byte=uint8_t, tr=uint16_t)
@@ -69,7 +69,7 @@ cdef class GPU:
         dy=int, dx=int, oy=int, ox=int,
         color=int
         )
-    cdef array render(self)
+    cdef np.ndarray[DTYPE_t, ndim=2] render(self)
 
     cdef void save(self, object f)
     cdef void load(self, object f)
