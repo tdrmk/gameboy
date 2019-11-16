@@ -7,6 +7,7 @@ cimport joypad
 cimport timer
 cimport memory
 cimport display
+cimport mixer
 cimport numpy as np
 ctypedef np.uint32_t DTYPE_t
 import cython
@@ -22,7 +23,7 @@ cdef class Gameboy:
     cdef memory.MMU memory
     cdef cpu.CPU cpu
     cdef display.Display display
-    cdef object mixer
+    cdef mixer.Mixer mixer
 
     @cython.locals(ly=uint8_t, frame=np.ndarray)
     cdef void tick_frame(self)

@@ -3,11 +3,29 @@ import numpy as np
 
 # Fs = 131072 # Frequency of mixer
 Fs = 44100
-pygame.mixer.init(frequency=Fs, size=-8, channels=2)  # Unsigned 8 bit representation of sound, mono output
 
 
-class MixerChannel:
+class Channel:
+    def set_enable(self, enable):
+        pass
+
+    def set_output(self, out1, out2):
+        pass
+
+    def set_master_volume(self, vol1, vol2):
+        pass
+
+    def play(self, wave, freq):
+        pass
+
+    def stop(self):
+        pass
+
+
+class PyGameChannel(Channel):
     def __init__(self, _id):
+        # Unsigned 8 bit representation of sound, stereo output
+        pygame.mixer.init(frequency=Fs, size=-8, channels=2)
         self.channel = pygame.mixer.Channel(_id)
         self.output1, self.output2 = False, False
         self.enabled = False
@@ -37,8 +55,8 @@ class MixerChannel:
             s = Fs / freq / n
             if N > 0 and any(wave):  # Number of samples of the wave must be greater than 0 to output
                 # volume is taken into account while mixing
-                self.channel.play(pygame.sndarray.make_sound(np.array(
-                    [[wave[int(i/s)], wave[int(i/s)]] for i in range(N)], dtype=np.uint8)), loops=-1)
+                snd_array = np.array([[wave[int(i / s)], wave[int(i / s)]] for i in range(N)], dtype=np.uint8)
+                self.channel.play(pygame.sndarray.make_sound(snd_array), loops=-1)
                 self.playing = True
                 # Starting playing
                 return

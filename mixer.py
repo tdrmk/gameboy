@@ -1,12 +1,24 @@
-from channel import MixerChannel as Channel
+import channel
 
-WAVEFORMS = {
-    # duty , pattern
-    0b00: [0, 0, 0, 0, 0, 0, 0, 1],  # 12.5%
-    0b01: [1, 0, 0, 0, 0, 0, 0, 1],  # 25.0%
-    0b10: [1, 0, 0, 0, 0, 1, 1, 1],  # 50.0%
-    0b11: [0, 1, 1, 1, 1, 1, 1, 0],  # 75.0%
-}
+# WAVEFORMS = {
+#     # duty , pattern
+#     0b00: [0, 0, 0, 0, 0, 0, 0, 1],  # 12.5%
+#     0b01: [1, 0, 0, 0, 0, 0, 0, 1],  # 25.0%
+#     0b10: [1, 0, 0, 0, 0, 1, 1, 1],  # 50.0%
+#     0b11: [0, 1, 1, 1, 1, 1, 1, 0],  # 75.0%
+# }
+
+
+def get_waveform(i):
+    # i: duty
+    if i == 0b00:
+        return [0, 0, 0, 0, 0, 0, 0, 1]  # 12.5%
+    elif i == 0b01:
+        return [1, 0, 0, 0, 0, 0, 0, 1]  # 25.0%
+    elif i == 0b10:
+        return [1, 0, 0, 0, 0, 1, 1, 1]  # 50.0%
+    elif i == 0b11:
+        return [0, 1, 1, 1, 1, 1, 1, 0]  # 75.0%
 
 
 class Sound1:
@@ -40,14 +52,14 @@ class Sound1:
         # Envelope
         # Extracted (Envelop)
         self.volume_initial = 0
-        self.volume_amplify = 0
+        self.volume_amplify = False
         self.volume_period = 0
         # Internal (Envelop)
         self.volume_enabled = False
         self.volume = 0  # The computed volume (4-bit)
         self.volume_counter = 0
 
-        self.wave = WAVEFORMS[0]
+        self.wave = get_waveform(0)
         # Length
         self.length_enabled = False
         self.length = 64
@@ -140,7 +152,7 @@ class Sound1:
 
     def nr11(self, byte):
         self.NR11 = byte
-        self.wave = WAVEFORMS[byte >> 6]
+        self.wave = get_waveform(byte >> 6)
         self.length = 64 - (byte & 0x1F)  # Note: length not readable
 
     def update_length(self):
@@ -336,7 +348,7 @@ class Sound4:
         # Envelope
         # Extracted (Envelop)
         self.volume_initial = 0
-        self.volume_amplify = 0
+        self.volume_amplify = False
         self.volume_period = 0
         # Internal (Envelop)
         self.volume_enabled = False
@@ -364,11 +376,10 @@ class Sound4:
 
     def _play(self):
         # TODO: Decide on the length to play based on when next it would likely be called
-        # TODO: Use the volume period and frequency to determine the portion of noise played and also have the a noise counter
+        # TODO: Use the volume period and frequency to determine the portion of noise played and
+        #  also have the a noise counter
         # TODO: Also normalize to prevent noise
-        # print(f'Playing Sound 4')
         wave = [x * self.volume for x in self.wave]
-        # Dividing so that individual high/low played at given frequency
         self.channel.play(wave, self.frequency / len(wave))
 
     def reset(self):
@@ -466,10 +477,10 @@ class Sound4:
 class Mixer:
     def __init__(self):
         # pygame.mixer.init()
-        self.channel1 = Channel(0)
-        self.channel2 = Channel(1)
-        self.channel3 = Channel(2)
-        self.channel4 = Channel(3)
+        self.channel1 = channel.PyGameChannel(0)
+        self.channel2 = channel.PyGameChannel(1)
+        self.channel3 = channel.PyGameChannel(2)
+        self.channel4 = channel.PyGameChannel(3)
 
         self.channel1.set_enable(True)
         self.channel2.set_enable(True)

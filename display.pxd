@@ -3,7 +3,6 @@ cimport numpy as np
 ctypedef np.uint32_t DTYPE_t
 
 from gameboy cimport Gameboy
-cimport sdl2
 cimport joypad
 
 cdef dict key_map

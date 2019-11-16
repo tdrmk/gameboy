@@ -108,7 +108,8 @@ class Gameboy:
 
             end_time = time.time()
             # Time so as to adjust the frame rate!!
-            if start_time - end_time < 0.00837:
+            # print('time taken:', end_time - start_time)
+            if end_time - start_time < 0.00837:
                 time.sleep(0.00837 - (start_time - end_time))
 
         else:

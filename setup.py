@@ -7,7 +7,7 @@ from Cython.Build import cythonize
 setup(
     ext_modules=cythonize(
         ['bootrom.py', 'cartridge.py', 'cpu.py', 'display.py', 'gameboy.py', 'graphics.py', 'joypad.py',
-         'instructions.py', 'joypad.py', 'memory.py', 'timer.py'],
+         'instructions.py', 'joypad.py', 'memory.py', 'timer.py', 'channel.py', 'mixer.py'],
         annotate=True,
         language_level=3,
         include_path=[numpy.get_include()],
@@ -20,5 +20,4 @@ setup(
             "nonecheck": False,
             "overflowcheck": False,
         }),
-include_dirs=[numpy.get_include()]
 )

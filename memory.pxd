@@ -5,6 +5,7 @@ cimport cartridge
 cimport graphics
 cimport joypad
 cimport timer
+cimport mixer
 
 import cython
 
@@ -22,7 +23,7 @@ cdef class MMU:
     cdef uint8_t dma
     cdef uint8_t interrupt_request
     cdef uint8_t interrupt_enable
-    cdef object mixer
+    cdef mixer.Mixer mixer
 
     cdef uint8_t read_byte(self, uint16_t address)
     @cython.locals(src=uint16_t, dst=uint16_t, i=uint16_t)
