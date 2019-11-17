@@ -8,7 +8,7 @@ IO_PORTS = 128
 
 class MMU:
     # Memory management Unit
-    def __init__(self, boot_rom, cartridge, gpu, joypad, timer):
+    def __init__(self, boot_rom, cartridge, gpu, joypad, timer, mixer):
         work_ram = bytearray(WORK_RAM)
         high_ram = bytearray(HIGH_RAM)
         unusable_io_ports = bytearray(UNUSABLE_IO_PORTS)
@@ -24,6 +24,7 @@ class MMU:
         self.gpu = gpu
         self.joypad = joypad
         self.timer = timer
+        self.mixer = mixer
 
         # I/O Registers
         self.dma = 0
@@ -117,7 +118,8 @@ class MMU:
                 return self.timer.tma
             elif address == 0xFF07:
                 return self.timer.tac
-
+            if 0xFF10 <= address <= 0xFF3F:
+                return self.mixer.read_byte(address)
             return self.io_ports[address & 0xFF]
         elif 0xFF80 <= address <= 0xFFFE:
             return self.high_ram[address & 0x7F]
@@ -198,6 +200,8 @@ class MMU:
                 self.timer.tma = byte
             elif address == 0xFF07:
                 self.timer.tac = byte
+            if 0xFF10 <= address <= 0xFF3F:
+                self.mixer.write_byte(address, byte)
             else:
                 self.io_ports[address & 0xFF] = byte
         elif 0xFF80 <= address <= 0xFFFE:

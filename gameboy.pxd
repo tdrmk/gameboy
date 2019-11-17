@@ -21,6 +21,7 @@ cdef class Gameboy:
     cdef memory.MMU memory
     cdef cpu.CPU cpu
     cdef display.Display display
+    cdef object mixer
 
     @cython.locals(ly=uint8_t, frame=array)
     cdef void tick_frame(self)
