@@ -2,7 +2,6 @@ try:
     from cython import compiled
 except ImportError:
     compiled = False
-from time import localtime, strftime
 
 from cpu import CPU
 from memory import MMU
@@ -12,14 +11,17 @@ from cartridge import get_cartridge
 from joypad import Joypad
 from timer import Timer
 from display import Display
-import time
 from mixer import Mixer
+
+import os   # Used for loading from recent save
+import re   # Used for loading from recent save
+import time
 
 V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD = range(0, 5)
 
 
 class Gameboy:
-    def __init__(self, gb_file, boot_file=None, save_file=None, stretch=False):
+    def __init__(self, gb_file, boot_file=None, save_file=None, stretch=False, most_recent=False):
         boot_rom = BootROM(boot_file)
         cartridge = get_cartridge(gb_file)
         timer = Timer()
@@ -44,12 +46,35 @@ class Gameboy:
         self.display = display
         self.mixer = mixer
 
+        if most_recent:
+            # Get the most recent save file if any
+            recent_file = self.recent_save_file()
+            if recent_file is not None:
+                save_file = recent_file
+
         if save_file is not None:
             # Load the game from the specified load file !!
             self.load(save_file)
 
+    def recent_save_file(self):
+        # This function returns the most recent save file if it exists
+        try:
+            file_names = [file for file in os.listdir('SAVE/') if
+                          re.match(f"{self.cartridge.get_title()}\[(.*)\].save", file)]
+            if not file_names:
+                print(f"No Save files for {self.cartridge.get_title()} in 'SAVE/' directory!")
+                return None
+            save_times = [re.match(".*\[(.*)\].save", name).groups()[0]
+                          for name in file_names]   # extract the save times in string
+            time_secs = [time.mktime(time.strptime(time_str, '%d %b %Y %H:%M:%S'))
+                         for time_str in save_times]    # convert them to seconds
+            return os.path.join('SAVE', file_names[time_secs.index(max(time_secs))])
+        except FileNotFoundError:
+            print(f"Cannot find 'SAVE/' directory!")
+            return None
+
     def save(self):
-        filename = f"SAVE/{self.cartridge.get_title()}[{strftime('%d %b %Y %H:%M:%S', localtime())}].save"
+        filename = f"SAVE/{self.cartridge.get_title()}[{time.strftime('%d %b %Y %H:%M:%S', time.localtime())}].save"
         with open(filename, 'wb') as f:
             self.cpu.save(f)
             self.cartridge.save(f)
@@ -112,7 +137,7 @@ class Gameboy:
             # Time so as to adjust the frame rate!!
             # print('time taken:', end_time - start_time)
             if end_time - start_time < 0.00837:
-                time.sleep(0.00837 - (start_time - end_time))
+                time.sleep(0.00837 - (end_time - start_time))
 
         else:
             self.display.render_blank()
