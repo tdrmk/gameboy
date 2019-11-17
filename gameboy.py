@@ -18,6 +18,7 @@ import re   # Used for loading from recent save
 import time
 
 V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD = range(0, 5)
+frequencies = [4194304, 8388608]
 
 
 class Gameboy:
@@ -55,6 +56,13 @@ class Gameboy:
         if save_file is not None:
             # Load the game from the specified load file !!
             self.load(save_file)
+
+        self.f_index = 0
+        self.frame_duration = 70224 / frequencies[self.f_index]
+
+    def toggle_frequency(self):
+        self.f_index = (self.f_index + 1) % len(frequencies)
+        self.frame_duration = 70224 / frequencies[self.f_index]
 
     def recent_save_file(self):
         # This function returns the most recent save file if it exists
@@ -136,8 +144,9 @@ class Gameboy:
             end_time = time.time()
             # Time so as to adjust the frame rate!!
             # print('time taken:', end_time - start_time)
-            if end_time - start_time < 0.00837:
-                time.sleep(0.00837 - (end_time - start_time))
+            time_taken = end_time - start_time
+            if time_taken < self.frame_duration:
+                time.sleep(self.frame_duration - time_taken)
 
         else:
             self.display.render_blank()

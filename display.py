@@ -50,6 +50,8 @@ class Display:
                 self.gameboy.save()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_m:
                 self.gameboy.mixer.toggle_mute()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_f:
+                self.gameboy.toggle_frequency()
 
     def render(self, frame_buffer):
         self._handle_events()

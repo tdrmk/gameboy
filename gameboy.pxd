@@ -13,6 +13,7 @@ ctypedef np.uint32_t DTYPE_t
 import cython
 
 cdef uint8_t V_BLANK, LCD_STAT, TIMER, SERIAL, JOYPAD
+cdef list frequencies
 
 cdef class Gameboy:
     cdef bootrom.BootROM boot_rom
@@ -24,8 +25,11 @@ cdef class Gameboy:
     cdef cpu.CPU cpu
     cdef display.Display display
     cdef mixer.Mixer mixer
+    cdef int f_index
+    cdef float frame_duration
 
-    @cython.locals(ly=uint8_t, frame=np.ndarray)
+    cdef void toggle_frequency(self)
+    @cython.locals(ly=uint8_t, frame=np.ndarray, start_time=float, end_time=float, time_taken=float)
     cdef void tick_frame(self)
 
     @cython.locals(cycles=uint32_t, ticks=uint32_t)
