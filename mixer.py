@@ -400,9 +400,9 @@ class Sound4:
         self.clock_shift = 0
         self.lfsr_mode = False
         self.divisor_code = 0.5
-        # both using same to lower the size impact on audio speed
-        self.wave_bit15 = lfsr(7)  # Wave to use when lfsr mode = 0
-        self.wave_bit7 = lfsr(7)  # Wave to use when lfsr mode = 1
+        # Generate both LFSR patterns for different noise modes
+        self.wave_bit15 = lfsr(15)  # Wave to use when lfsr mode = 0 (15-bit LFSR, white noise)
+        self.wave_bit7 = lfsr(7)   # Wave to use when lfsr mode = 1 (7-bit LFSR, metallic noise)
         self.wave = self.wave_bit15
         # Computed
         self.frequency = 524288  # Computed from the Polynomial counter
@@ -645,8 +645,8 @@ class Mixer:
 
     def nr50(self, byte):
         self.NR50 = byte
-        # TODO: Set channel volume
-        v1, v2 = byte & 0x03, (byte & 0x30) >> 4
+        # NR50: Bits 0-2 = right volume, Bits 4-6 = left volume (3 bits each, 0-7)
+        v1, v2 = byte & 0x07, (byte & 0x70) >> 4
         self.channel1.set_master_volume(v1 / 7, v2 / 7)
         self.channel2.set_master_volume(v1 / 7, v2 / 7)
         self.channel3.set_master_volume(v1 / 7, v2 / 7)

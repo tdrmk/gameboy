@@ -23,9 +23,15 @@ class Channel:
 
 
 class PyGameChannel(Channel):
+    # Class variable to track if mixer is initialized
+    _mixer_initialized = False
+    
     def __init__(self, _id):
         # Unsigned 8 bit representation of sound, stereo output
-        pygame.mixer.init(frequency=Fs, size=-8, channels=2)
+        # Only initialize pygame.mixer once, not per channel
+        if not PyGameChannel._mixer_initialized:
+            pygame.mixer.init(frequency=Fs, size=-8, channels=2)
+            PyGameChannel._mixer_initialized = True
         self.channel = pygame.mixer.Channel(_id)
         self.output1, self.output2 = False, False
         self.enabled = False
